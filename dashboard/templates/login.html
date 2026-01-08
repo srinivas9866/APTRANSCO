@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <script src=".\static\js\tailwind.js"></script>
+    <link rel="stylesheet" href=".\static\css\login.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body class="bg-gray-100 min-h-screen flex flex-col p-6 relative">
+
+  <!-- Logo at top-left -->
+  <div class="absolute top-6 left-6">
+   <!-- <h4 class="text-sm italic text-gray-500 text-center">Powered by</h4> -->
+    <img src="{{ url_for('static', filename='logo/saas_logo.jpg') }}" alt="Saas_Logo" class="h-10 w-auto">
+  </div>
+
+  <div class="w-full flex flex-col items-center">
+    <div class="w-full text-center mt-2 mb-6">
+      <h1 class="text-2xl font-bold text-blue-700">Transformer Oil Testing Software</h1>
+      <h3>(Powered by SAAS ELECTRICS LLP)</h3>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="flex-grow flex flex-col justify-center items-center">
+    <div class="login-container">
+        <div class="flex-grow flex flex-col justify-center items-center">
+            <img src="{{ url_for('static', filename='logo/loginpage_user.png') }}" alt="user_logo" class="h-16 w-auto">
+        </div>
+        <h2 class="text-xl font-bold mb-4 text-center">Login</h2>
+        <form method="POST" action="/login">
+            <input type="text" name="username" placeholder="Username" required />
+            <input type="password" name="password" placeholder="Password" required />
+             
+
+            <button type="submit">Login</button>
+        </form>
+    </div>
+  </div>
+ 
+  
+    <footer class="mt-auto text-center text-gray-500 text-sm py-4 border-t border-gray-300">
+      © 2025 SAAS ELECTRICS LLP | All Rights Reserved
+  </footer>
+
+</body>
+
+</html>

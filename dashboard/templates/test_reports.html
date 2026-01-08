@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Reports</title>
+  <script src="{{ url_for('static', filename='js/tailwind.js') }}"></script>
+  <script src="{{ url_for('static', filename='plotly-latest.min.js') }}"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
+
+  <script id="substation-data" type="application/json">
+  {{ substations|tojson|safe }}
+</script>
+
+<script>
+  const substationMap = JSON.parse(document.getElementById("substation-data").textContent);
+
+  function updateSubstationName() {
+    const selectedId = document.getElementById("substation_short_id").value;
+    const nameField = document.getElementById("substation_name");
+    nameField.value = substationMap[selectedId] || "";
+  }
+
+  function openModal(reportId) {
+    const modal = document.getElementById("reportModal");
+    const frame = document.getElementById("reportFrame");
+    frame.src = `/show/${reportId}`;
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+
+  function closeModal() {
+    const modal = document.getElementById("reportModal");
+    const frame = document.getElementById("reportFrame");
+    frame.src = "";
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+
+  
+  function openTrendModal(transformerId) {
+  const modal = document.getElementById("trendModal");
+  const content = document.getElementById("trendContent");
+
+  // Show loading placeholder
+  content.innerHTML = "<p class='text-center text-gray-600'>Loading trend graph...</p>";
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+
+  fetch(`/trend/${transformerId}`)
+    .then(response => {
+      if (!response.ok) throw new Error("Network response was not ok.");
+      return response.json();
+    })
+    .then(data => {
+      if (data && data.html) {
+        // Insert the raw HTML
+        content.innerHTML = data.html;
+
+        // 🔁 Execute any <script> tags inside the HTML
+        const scripts = content.querySelectorAll("script");
+        scripts.forEach(oldScript => {
+          const newScript = document.createElement("script");
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+          } else {
+            newScript.textContent = oldScript.textContent;
+          }
+          document.body.appendChild(newScript);
+        });
+      } else {
+        content.innerHTML = "<p class='text-red-600'>No trend data returned.</p>";
+      }
+    })
+    .catch(error => {
+      console.error("Error fetching trend data:", error);
+      content.innerHTML = "<p class='text-red-600'>Error loading trend graph.</p>";
+    });
+}
+
+
+
+function closeTrendModal() {
+  const modal = document.getElementById("trendModal");
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+  document.getElementById("trendContent").innerHTML = "";
+}
+</script>
+</head>
+<body class="bg-gray-100 min-h-screen relative">
+
+
+  <div class="absolute top-6 left-6">
+   <!-- <h4 class="text-sm italic text-gray-500 text-center">Powered by</h4> -->
+    <img src="{{ url_for('static', filename='logo/saas_logo.jpg') }}" alt="Saas_Logo" class="h-10 w-auto">
+  </div>
+
+  <!-- Logo at Top-Left 
+  <div class="absolute top-6 left-6">
+    <img src="{{ url_for('static', filename='logo/aptransco_logo.jpg') }}" alt="Logo" class="h-16 w-auto">
+  </div>
+  
+  <div class="absolute top-6 right-6">
+    <img src="{{ url_for('static', filename='logo/mbu.png') }}" alt="mbu_logo" class="h-16 w-auto">
+  </div>
+  -->
+  <!-- Header -->
+  <div class="w-full flex flex-col items-center">
+    <div class="w-full text-center mt-2 mb-6">
+      <h1 class="text-2xl font-bold text-blue-700">Transformer Oil Testing Software</h1>
+      <h3>(Powered by SAAS ELECTRICS LLP)</h3>
+    </div>
+
+  <!-- Form Section -->
+<div class="flex justify-center mt-10">
+  <div class="w-full max-w-7xl bg-white shadow-2xl rounded-2xl p-10">
+    <h2 class="text-xl font-bold text-center text-blue-700 mb-4">TREND ANALYSIS</h2>
+
+    <form action="/process" method="post" enctype="multipart/form-data" class="space-y-4">
+      <!-- Dropdown -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700">SUB-STATION ID</label>
+        <select id="substation_short_id" name="substation_short_id" required onchange="updateSubstationName()"
+                class="mt-1 block w-full border border-gray-300 rounded-lg p-2">
+          <option value="">-- Select Substation ID --</option>
+          {% for short_id, name in substations.items() %}
+            <option value="{{ short_id }}">{{ short_id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="text-center">
+        <button type="submit"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+          Show
+        </button>
+        {% if success%}
+          <p class="text-green-600 font-semibold mt-3">{{ success }}</p>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Table Section -->
+{% if success and results %}
+  <div class="w-full flex justify-center mt-6">
+    <div class="w-full max-w-10xl">
+      <div class="text-center text-xl font-semibold text-blue-800 mb-4">
+        SUBSTATION: {{ results[0].substation_name }}
+      </div>
+      <table class="w-full text-xs table-auto border-collapse border border-gray-300">
+        <thead class="bg-blue-100">
+          <tr>
+            <th class="border border-gray-300 px-1 py-1">S.No</th>
+            <th class="border border-gray-300 px-1 py-1">Test_Date</th>
+            <th class="border border-gray-300 px-1 py-1">Transformer ID</th>
+            <th class="border border-gray-300 px-1 py-1">Capacity</th>
+            <th class="border border-gray-300 px-1 py-1">CO2</th>
+            <th class="border border-gray-300 px-1 py-1">Ethylene</th>
+            <th class="border border-gray-300 px-1 py-1">Acetylene</th>
+            <th class="border border-gray-300 px-1 py-1">Ethane</th>
+            <th class="border border-gray-300 px-1 py-1">H2</th>
+            <th class="border border-gray-300 px-1 py-1">O2</th>
+            <th class="border border-gray-300 px-1 py-1">N2</th>
+            <th class="border border-gray-300 px-1 py-1">Methane</th>
+            <th class="border border-gray-300 px-1 py-1">CO</th>
+            <th class="border border-gray-300 px-1 py-1">Results</th>
+            <th class="border border-gray-300 px-1 py-1">Trend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in results %}
+          <tr class="bg-white hover:bg-gray-50">
+            <td class="border border-gray-300 px-2 py-1">{{ loop.index }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.testing_date }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.transformer_id }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.capacity }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.CO2 }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.Ethylene }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.Acetylene }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.Ethane }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.H2 }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.O2 }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.N2 }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.Methane }}</td>
+            <td class="border border-gray-300 px-2 py-1">{{ record.CO }}</td>
+            <td class="border border-gray-300 px-2 py-1 text-center">
+                  <button 
+                    onclick="openModal('{{ record.report_id }}')" 
+                    class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
+                    Show
+                  </button>
+                </td>
+
+            <td class="border border-gray-300 px-2 py-1 text-center">
+                <button 
+                        onclick="openTrendModal('{{ record.transformer_id }}')" 
+                        class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
+                        Show
+                      </button>
+
+                </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Modal Background -->
+<div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-1/2 p-4 relative max-h-[90vh] overflow-y-auto">
+    <button onclick="closeModal()" class="absolute top-2 right-2 text-gray-600 hover:text-black text-xl font-bold">&times;</button>
+    <h2 class="text-lg font-semibold text-blue-700 mb-2">DGA Report Preview</h2>
+    <iframe id="reportFrame" src="" class="w-full h-[75vh] border rounded-lg"></iframe>
+  </div>
+</div>
+
+<!-- Trend Modal -->
+<div id="trendModal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-11/12 md:w-3/4 lg:w-2/3 p-4 relative max-h-[90vh] overflow-y-auto">
+    <button onclick="closeTrendModal()" class="absolute top-2 right-2 text-gray-600 hover:text-black text-xl font-bold">&times;</button>
+    <h2 class="text-lg font-semibold text-blue-700 mb-2">Gas Trend Analysis</h2>
+    <div id="trendContent" class="w-full"></div>
+  </div>
+</div>
+<footer class="mt-auto text-center text-gray-500 text-sm py-4 border-t border-gray-300">
+      © 2025 SAAS ELECTRICS LLP | All Rights Reserved
+  </footer>
+</body>
+</html>
